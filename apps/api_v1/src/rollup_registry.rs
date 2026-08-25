@@ -187,6 +187,33 @@ pub fn get_rollup_registry() -> HashMap<String, String> {
     // Arbitrum One additional nodes
     insert_unique(&mut registry, "0xb80e953f51e3ee52dc9a00b5f1a2c8a5f5735c3e", "Arbitrum One");
 
+    // zk-rollups + others recovered from UNKNOWN blob posters (2026-08, via Blobscan).
+    insert_unique(&mut registry, "0x06a9ab27c7e2255df1815e6cc0168d7755feb19a", "Taiko");
+    insert_unique(&mut registry, "0x000000633b68f5d8d3a86593ebb815b4663bcbe0", "Taiko");
+    insert_unique(&mut registry, "0x41f2f55571f9e8e3ba511adc48879bd67626a2b6", "Taiko");
+    insert_unique(&mut registry, "0x66cc9a0eb519e9e1de68f6cf0aa1aa1efe3723d5", "Taiko");
+    insert_unique(&mut registry, "0x79fb4ebdd543d0927b809b1e8f552f1bf74dec65", "Taiko");
+    insert_unique(&mut registry, "0x9a5cc6e3a3325cdc19fc76926cc9666c80139c09", "Taiko");
+    insert_unique(&mut registry, "0x32f2713b062134e69f5006eb070bc41d9765f5c8", "Taiko");
+    insert_unique(&mut registry, "0x3b4d794a66304f130a4db8f2551b0070dfcf5ca7", "Lighter");
+    insert_unique(&mut registry, "0xcf2898225ed05be911d3709d9417e86e0b4cfc8f", "Scroll");
+    insert_unique(&mut registry, "0xa9268341831efa4937537bc3e9eb36dbece83c7e", "Linea");
+    insert_unique(&mut registry, "0x0d3250c3d5facb74ac15834096397a3ef790ec99", "zkSync Era");
+    insert_unique(&mut registry, "0x99199a22125034c808ff20f377d91187e8050f2e", "Mode");
+    insert_unique(&mut registry, "0x41b8cd6791de4d8f9e0eaf7861ac506822adce12", "Kroma");
+    insert_unique(&mut registry, "0x52ee324f2bcd0c5363d713eb9f62d1ee47266ac1", "River");
+    insert_unique(&mut registry, "0x11805594be0229ef08429d775af0c55f7c4535de", "Abstract");
+    insert_unique(&mut registry, "0xa6ea2f3299b63c53143c993d2d5e60a69cd6fe24", "Lisk");
+    insert_unique(&mut registry, "0x68bdfece01535090c8f3c27ec3b1ae97e83fa4aa", "Mint");
+    insert_unique(&mut registry, "0x8cda8351236199af7532bad53d683ddd9b275d89", "Race");
+    insert_unique(&mut registry, "0xc94c243f8fb37223f3eb2f7961f7072602a51b8b", "Metal L2");
+    insert_unique(&mut registry, "0xea0337efc12e98ab118948da570c07691e8e4b37", "Fuel");
+    insert_unique(&mut registry, "0x67a44ce38627f46f20b1293960559ed85dd194f1", "Polynomial");
+    insert_unique(&mut registry, "0xe1b64045351b0b6e9821f19b39f81bc4711d2230", "Boba Network");
+    insert_unique(&mut registry, "0x3d0bf26e60a689a7da5ea3ddad7371f27f7671a5", "Optopia");
+    insert_unique(&mut registry, "0xbba36cdf020788f0d08d5688c0bee3fb30ce1c80", "Morph");
+    insert_unique(&mut registry, "0x34e387b37d3adeaa6d5b92ce30de3af3dca39796", "Morph");
+
     registry
 }
 

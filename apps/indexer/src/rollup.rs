@@ -124,6 +124,35 @@ pub fn build_registry() -> HashMap<String, &'static str> {
     add("0xff00000000000000000000000000000000042220", "Celo");
     add("0x1a7e4e63778b4f12a199c062f3efdd288afcbce8", "Celo");
 
+    // zk-rollups + others recovered from UNKNOWN blob posters (2026-08, via Blobscan).
+    // Shared inboxes first: the resolver checks `to` as well, so these catch every poster.
+    add("0x06a9ab27c7e2255df1815e6cc0168d7755feb19a", "Taiko");   // TaikoL1 inbox
+    // Taiko proposers (post to several inboxes, so match by sender too)
+    add("0x000000633b68f5d8d3a86593ebb815b4663bcbe0", "Taiko");
+    add("0x41f2f55571f9e8e3ba511adc48879bd67626a2b6", "Taiko");
+    add("0x66cc9a0eb519e9e1de68f6cf0aa1aa1efe3723d5", "Taiko");
+    add("0x79fb4ebdd543d0927b809b1e8f552f1bf74dec65", "Taiko");
+    add("0x9a5cc6e3a3325cdc19fc76926cc9666c80139c09", "Taiko");
+    add("0x32f2713b062134e69f5006eb070bc41d9765f5c8", "Taiko");
+    add("0x3b4d794a66304f130a4db8f2551b0070dfcf5ca7", "Lighter"); // shared inbox
+    add("0xcf2898225ed05be911d3709d9417e86e0b4cfc8f", "Scroll");
+    add("0xa9268341831efa4937537bc3e9eb36dbece83c7e", "Linea");
+    add("0x0d3250c3d5facb74ac15834096397a3ef790ec99", "zkSync Era");
+    add("0x99199a22125034c808ff20f377d91187e8050f2e", "Mode");
+    add("0x41b8cd6791de4d8f9e0eaf7861ac506822adce12", "Kroma");
+    add("0x52ee324f2bcd0c5363d713eb9f62d1ee47266ac1", "River");
+    add("0x11805594be0229ef08429d775af0c55f7c4535de", "Abstract");
+    add("0xa6ea2f3299b63c53143c993d2d5e60a69cd6fe24", "Lisk");
+    add("0x68bdfece01535090c8f3c27ec3b1ae97e83fa4aa", "Mint");
+    add("0x8cda8351236199af7532bad53d683ddd9b275d89", "Race");
+    add("0xc94c243f8fb37223f3eb2f7961f7072602a51b8b", "Metal L2");
+    add("0xea0337efc12e98ab118948da570c07691e8e4b37", "Fuel");
+    add("0x67a44ce38627f46f20b1293960559ed85dd194f1", "Polynomial");
+    add("0xe1b64045351b0b6e9821f19b39f81bc4711d2230", "Boba Network");
+    add("0x3d0bf26e60a689a7da5ea3ddad7371f27f7671a5", "Optopia");
+    add("0xbba36cdf020788f0d08d5688c0bee3fb30ce1c80", "Morph");
+    add("0x34e387b37d3adeaa6d5b92ce30de3af3dca39796", "Morph");
+
     m
 }
 

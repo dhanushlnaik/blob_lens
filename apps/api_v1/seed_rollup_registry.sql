@@ -83,7 +83,34 @@ VALUES
   ('0x8612014a343089f1ddbacfd42baf4afbf9133593', 'SuperSeed', '5330'),
 
   ('0x5c53f2ff1030c7fbc0616fd5b8fc6be97aa27e00', 'Superlumio', NULL),
-  ('0xa12cf34001e553dc254d131105364351f5174d75', 'Superlumio', NULL)
+  ('0xa12cf34001e553dc254d131105364351f5174d75', 'Superlumio', NULL),
+
+  -- zk-rollups + others recovered from UNKNOWN blob posters (2026-08, via Blobscan).
+  ('0x06a9ab27c7e2255df1815e6cc0168d7755feb19a', 'Taiko', '167000'),        -- TaikoL1 inbox
+  ('0x7a853a6480f4d7db79ae91c16c960dbbb6710d25', 'Taiko', '167000'),
+  ('0x000000633b68f5d8d3a86593ebb815b4663bcbe0', 'Taiko', '167000'),
+  ('0x41f2f55571f9e8e3ba511adc48879bd67626a2b6', 'Taiko', '167000'),
+  ('0x66cc9a0eb519e9e1de68f6cf0aa1aa1efe3723d5', 'Taiko', '167000'),
+  ('0x79fb4ebdd543d0927b809b1e8f552f1bf74dec65', 'Taiko', '167000'),
+  ('0x9a5cc6e3a3325cdc19fc76926cc9666c80139c09', 'Taiko', '167000'),
+  ('0x32f2713b062134e69f5006eb070bc41d9765f5c8', 'Taiko', '167000'),
+  ('0x3b4d794a66304f130a4db8f2551b0070dfcf5ca7', 'Lighter', NULL),          -- shared inbox
+  ('0xcf2898225ed05be911d3709d9417e86e0b4cfc8f', 'Scroll', '534352'),
+  ('0xa9268341831efa4937537bc3e9eb36dbece83c7e', 'Linea', '59144'),
+  ('0x0d3250c3d5facb74ac15834096397a3ef790ec99', 'zkSync Era', '324'),
+  ('0x99199a22125034c808ff20f377d91187e8050f2e', 'Mode', '34443'),
+  ('0x41b8cd6791de4d8f9e0eaf7861ac506822adce12', 'Kroma', '255'),
+  ('0x52ee324f2bcd0c5363d713eb9f62d1ee47266ac1', 'River', NULL),
+  ('0x11805594be0229ef08429d775af0c55f7c4535de', 'Abstract', '2741'),
+  ('0xa6ea2f3299b63c53143c993d2d5e60a69cd6fe24', 'Lisk', '1135'),
+  ('0x68bdfece01535090c8f3c27ec3b1ae97e83fa4aa', 'Mint', '185'),
+  ('0x8cda8351236199af7532bad53d683ddd9b275d89', 'Race', '6805'),
+  ('0xea0337efc12e98ab118948da570c07691e8e4b37', 'Fuel', NULL),
+  ('0x67a44ce38627f46f20b1293960559ed85dd194f1', 'Polynomial', '8008'),
+  ('0xe1b64045351b0b6e9821f19b39f81bc4711d2230', 'Boba Network', '288'),
+  ('0x3d0bf26e60a689a7da5ea3ddad7371f27f7671a5', 'Optopia', '62050'),
+  ('0xbba36cdf020788f0d08d5688c0bee3fb30ce1c80', 'Morph', '2818'),
+  ('0x34e387b37d3adeaa6d5b92ce30de3af3dca39796', 'Morph', '2818')
 ON CONFLICT (address)
 DO UPDATE SET
   rollup_name = EXCLUDED.rollup_name,

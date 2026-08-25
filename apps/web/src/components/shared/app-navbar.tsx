@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/market", label: "Fee Market" },
   { href: "/leaderboard", label: "Rollups" },
   { href: "/dainsights", label: "DA Insights" },
+  { href: "/plataberget", label: "Platåberget" },
   { href: "/eips", label: "EIPs" },
 ];
 

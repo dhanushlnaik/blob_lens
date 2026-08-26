@@ -16,6 +16,7 @@ const NAV_LINKS = [
   { href: "/leaderboard", label: "Rollups" },
   { href: "/dainsights", label: "DA Insights" },
   { href: "/plataberget", label: "Platåberget" },
+  { href: "/validate", label: "Validation" },
   { href: "/eips", label: "EIPs" },
 ];
 

@@ -144,6 +144,23 @@ export function PlatabergetClient() {
     } as unknown as EChartsOption;
   }, [data, dark]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Horizontal 2-bar comparison builder (mainnet vs testnet).
+  const hCompare = (mnVal: number, tsVal: number, label: (v: number) => string, maxV?: number): EChartsOption => ({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis", ...tt, axisPointer: { type: "shadow" }, formatter: (ps: { name: string; value: number }[]) => `${ps[0]?.name}: <b>${label(ps[0]?.value)}</b>` },
+    grid: { top: 10, right: 64, bottom: 10, left: 12, containLabel: true },
+    xAxis: { type: "value", max: maxV, ...ax, axisLabel: { ...ax.axisLabel, formatter: (v: number) => label(v) } },
+    yAxis: { type: "category", data: ["Mainnet today", "Platåberget testnet"], ...ax, axisLabel: { ...ax.axisLabel, fontSize: 12 } },
+    series: [{
+      type: "bar", barWidth: "48%",
+      data: [{ value: mnVal, itemStyle: { color: C.main } }, { value: tsVal, itemStyle: { color: C.test } }],
+      label: { show: true, position: "right", color: labelColor, fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: "bold", formatter: (p: { value: number }) => label(p.value) },
+    }],
+  } as unknown as EChartsOption);
+
+  const baseFeeOption = useMemo<EChartsOption>(() => (data ? hCompare(data.mainnet.base_fee_gwei, data.devnet.base_fee_gwei, (v) => `${v.toFixed(3)} gwei`) : ({} as EChartsOption)), [data, dark]); // eslint-disable-line react-hooks/exhaustive-deps
+  const blobsCompareOption = useMemo<EChartsOption>(() => (data ? hCompare(data.mainnet.blobs_per_block, data.devnet.blobs_per_block, (v) => `${v.toFixed(1)}`) : ({} as EChartsOption)), [data, dark]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (err) return <div className="font-mono text-xs text-[var(--warning)] py-12">[ ERROR ] {err}</div>;
   if (!data) return <div className="font-mono text-xs text-[var(--text-muted)] py-12 animate-pulse tracking-widest">[ LOADING TESTNET IMPACT... ]</div>;
 
@@ -160,7 +177,7 @@ export function PlatabergetClient() {
             <AlertTriangle className="h-3 w-3" /> Testnet projection
           </span>
         </div>
-        <p className="max-w-3xl text-[15px] leading-relaxed text-[var(--text-secondary)]">
+        <p className="w-full text-[15px] leading-relaxed text-[var(--text-secondary)]">
           The next Ethereum upgrade makes every block bigger. On the live Platåberget testnet, block capacity has scaled to about
           <span className="font-semibold text-[var(--text-primary)]"> {ratio.toFixed(1)}x</span> mainnet today.
           <span className="ml-2 inline-flex items-center gap-3 align-middle text-[12px] font-mono text-[var(--text-muted)]">
@@ -224,6 +241,19 @@ export function PlatabergetClient() {
         <DottedCard title="Blobs per block over time" subtitle="Rollup data throughput" techBracket>
           <EChartWrapper option={blobOption} style={{ height: "210px", width: "100%" }} showFooter={false} />
           <HowToRead>Blobs carry rollup data on Ethereum. Each point is the average blobs per block, showing data availability alongside the gas and block-size changes.</HowToRead>
+        </DottedCard>
+      </div>
+
+      {/* Two-up: fee + blobs comparison */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DottedCard title="Base fee, testnet vs mainnet" subtitle="What one unit of gas costs" techBracket>
+          <EChartWrapper option={baseFeeOption} style={{ height: "150px", width: "100%" }} showFooter={false} />
+          <HowToRead>The base fee is the price of block space. With far more room per block, the Platåberget testnet&apos;s fee sits well below mainnet&apos;s. Real mainnet fees depend on demand, but bigger blocks relieve the pressure that pushes them up.</HowToRead>
+        </DottedCard>
+
+        <DottedCard title="Blobs per block, testnet vs mainnet" subtitle="Rollup data carried per block" techBracket>
+          <EChartWrapper option={blobsCompareOption} style={{ height: "150px", width: "100%" }} showFooter={false} />
+          <HowToRead>Blobs are the cheap data slots rollups post to Ethereum. The testnet is carrying more blobs per block than mainnet today, so rollups get more room for their data alongside the bigger blocks.</HowToRead>
         </DottedCard>
       </div>
 

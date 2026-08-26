@@ -21,7 +21,7 @@ export async function GET() {
                min(block_number) AS first_block,
                max(block_number) AS last_block,
                toUnixTimestamp(max(block_timestamp)) AS last_ts
-        FROM glamsterdam.block_stats
+        FROM glamsterdam.block_stats FINAL
       `),
       queryClickHouse<Row>(`
         SELECT round(avg(gas_limit)) AS gas_limit,
@@ -34,7 +34,7 @@ export async function GET() {
                round(avg(tx_type3), 1) AS tx_type3,
                round(avg(blob_count), 2) AS blobs_per_block,
                round(avg(base_fee_per_gas)) AS base_fee_wei
-        FROM glamsterdam.block_stats
+        FROM glamsterdam.block_stats FINAL
         WHERE block_number > (SELECT max(block_number) - ${RECENT_DEVNET_BLOCKS} FROM glamsterdam.block_stats)
       `),
       queryClickHouse<Row>(`
@@ -63,7 +63,7 @@ export async function GET() {
                round(avg(gas_used)) AS gas_used,
                round(avg(tx_count), 1) AS tx_count,
                round(avg(blob_count), 2) AS blob_count
-        FROM glamsterdam.block_stats
+        FROM glamsterdam.block_stats FINAL
         GROUP BY bucket
         ORDER BY bucket
       `),

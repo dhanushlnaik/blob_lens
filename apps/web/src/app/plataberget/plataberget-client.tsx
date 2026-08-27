@@ -28,6 +28,16 @@ const C = { test: "#7C5CFF", main: "#94A3B8", blob: "#D97706" };
 const M = (n: number) => `${(n / 1e6).toFixed(0)}M`;
 const LEGEND = { top: 0, itemWidth: 11, itemHeight: 11, textStyle: { fontSize: 11, fontFamily: "var(--font-mono)" } };
 
+/** Per-panel provenance line: the testnet data is per-block verifiable against Dora. */
+function VerifyDora() {
+  return (
+    <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+      Per-block data, verifiable against ethpandaops Dora.{" "}
+      <Link href="/validate" className="font-mono text-[var(--primary-text)] underline decoration-dotted">Check it →</Link>
+    </p>
+  );
+}
+
 function HowToRead({ children }: { children: React.ReactNode }) {
   return (
     <p className="mt-3 flex items-start gap-2 rounded-md bg-[var(--surface-sunken)] px-3 py-2 text-[12.5px] leading-relaxed">
@@ -213,8 +223,9 @@ export function PlatabergetClient() {
         <EChartWrapper option={rampOption} style={{ height: "340px", width: "100%" }} showFooter={false} />
         <HowToRead>
           The bold purple line is the maximum size of each Platåberget block. It stepped up from mainnet&apos;s level to about <span className="font-mono">{M(devnet.gas_limit)}</span>, roughly <span className="font-mono">{ratio.toFixed(1)}x</span> more.
-          The grey dashed line is all a mainnet block can hold today. The shaded area is how much each block actually uses, already well above the grey line, so the extra capacity is real, not theoretical.
+          The grey dashed line is all a mainnet block can hold today. The shaded area is how much each block actually <em>uses</em>: testnet traffic is synthetic and light, so for most of the run blocks sat well below even mainnet&apos;s capacity. Recent load-test bursts push usage toward <span className="font-mono">{M(devnet.gas_used)}</span> — showing the larger ceiling can genuinely be filled, not that it continuously is.
         </HowToRead>
+        <VerifyDora />
       </DottedCard>
 
       {/* Two-up: comparison + fullness */}
@@ -224,7 +235,7 @@ export function PlatabergetClient() {
           <HowToRead>Mainnet (grey) next to Platåberget (purple). The purple bars are about <span className="font-mono">{ratio.toFixed(1)}x</span> taller, meaning bigger blocks doing more work each. Gas just measures block space and computation.</HowToRead>
         </DottedCard>
 
-        <DottedCard title="The bigger blocks are genuinely full" subtitle="How full blocks run" techBracket>
+        <DottedCard title="How full the bigger blocks run now" subtitle="Recent window · last ~2,000 blocks" techBracket>
           <EChartWrapper option={fullnessOption} style={{ height: "150px", width: "100%" }} showFooter={false} />
           <div className="mt-3 flex flex-wrap items-baseline gap-2 border-t border-[var(--border)] pt-3">
             <span className="text-[13px] text-[var(--text-secondary)]">Transactions per block, on average:</span>
@@ -232,7 +243,7 @@ export function PlatabergetClient() {
             <ArrowRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />
             <span className="font-mono font-semibold text-[var(--primary-text)]">room for ~{ratio.toFixed(1)}x more</span>
           </div>
-          <HowToRead>Both networks run their blocks about equally full, so the testnet is not an empty big block. It does a similar share of work on a block roughly <span className="font-mono">{ratio.toFixed(1)}x</span> larger, leaving room for far more transactions.</HowToRead>
+          <HowToRead>In the recent window, both networks run their blocks at a similar fullness — so the recent testnet load isn&apos;t just empty big blocks. It does a comparable share of work on a block roughly <span className="font-mono">{ratio.toFixed(1)}x</span> larger, with headroom for far more. (Earlier in the run, traffic was much lighter — see the timeline above.)</HowToRead>
         </DottedCard>
       </div>
 
@@ -241,11 +252,13 @@ export function PlatabergetClient() {
         <DottedCard title="Transactions per block over time" subtitle="Activity on the Platåberget testnet" techBracket>
           <EChartWrapper option={txOption} style={{ height: "210px", width: "100%" }} showFooter={false} />
           <HowToRead>Each point is the average transactions in a block as the testnet runs. It shows real usage building, all comfortably inside the bigger blocks.</HowToRead>
+          <VerifyDora />
         </DottedCard>
 
         <DottedCard title="Blobs per block over time" subtitle="Rollup data throughput" techBracket>
           <EChartWrapper option={blobOption} style={{ height: "210px", width: "100%" }} showFooter={false} />
           <HowToRead>Blobs carry rollup data on Ethereum. Each point is the average blobs per block, showing data availability alongside the gas and block-size changes.</HowToRead>
+          <VerifyDora />
         </DottedCard>
       </div>
 

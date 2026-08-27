@@ -118,8 +118,15 @@ async function main() {
   // cannot reorg). ALLOW_UNFINALIZED=1 opts back into indexing to the live head.
   let finalized = head;
   if (!ALLOW_UNFINALIZED) {
-    const fb = await rpc('eth_getBlockByNumber', ['finalized', false]);
-    finalized = fb && fb.number != null ? hexN(fb.number) : head;
+    // The devnet RPC is a load balancer over many EL nodes at different heights,
+    // so a single `finalized` probe can hit a lagging node and under-report,
+    // stalling catch-up. Probe a few times and take the max (finalized is a
+    // consensus checkpoint — no node reports it too HIGH, only too low).
+    const probes = await Promise.all(
+      Array.from({ length: 5 }, () => rpc('eth_getBlockByNumber', ['finalized', false]).catch(() => null)),
+    );
+    const seen = probes.filter(Boolean).map((b) => hexN(b.number));
+    finalized = seen.length ? Math.max(...seen) : head;
   }
   const ceiling = ALLOW_UNFINALIZED ? head : Math.min(head, finalized);
 

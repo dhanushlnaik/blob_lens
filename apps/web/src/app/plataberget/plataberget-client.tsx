@@ -16,6 +16,11 @@ type Impact = {
   ramp: { block: number; gas_limit: number; gas_used: number; tx_count: number; blob_count: number }[];
   eips: { id: string; label: string }[];
   disclaimer: string;
+  methodology?: {
+    devnet: { table: string; source_rpc: string; window_blocks: number; window_first_block: number | string | null; window_last_block: number | string | null; samples: number | string; verified_against: string };
+    mainnet: { tables: string[]; window_blocks: number; window_first_block: number | string | null; window_last_block: number | string | null; samples: number | string };
+    formulas: { capacity_ratio: string; projected_tx_per_block: string; gas_util: string; dedup: string };
+  };
 };
 
 // Plataberget testnet = purple, mainnet today = grey. Blobs = amber. Consistent everywhere.
@@ -272,6 +277,44 @@ export function PlatabergetClient() {
           })}
         </ul>
       </DottedCard>
+
+      {/* Methodology & verification — for researchers who want to reproduce/validate */}
+      {data.methodology && (
+        <DottedCard title="Methodology & verification" subtitle="Every number, and how to reproduce it" badge="For reviewers" badgeType="iris" techBracket>
+          <div className="mt-1 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-[13px] text-[var(--text-secondary)]">
+            The devnet numbers are verified <span className="font-semibold text-[var(--text-primary)]">block-by-block against ethpandaops Dora</span>.{" "}
+            <Link href="/validate" className="font-mono text-[var(--primary-text)] underline decoration-dotted">Open the live validation tool →</Link>
+          </div>
+
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-md bg-[var(--surface-sunken)] p-3">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">Testnet (Platåberget)</div>
+              <dl className="mt-1.5 space-y-1 text-[12.5px]">
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">table</dt><dd className="font-mono text-[var(--text-secondary)]">{data.methodology.devnet.table}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">source</dt><dd className="font-mono text-[var(--text-secondary)]">{data.methodology.devnet.source_rpc}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">window</dt><dd className="font-mono text-[var(--text-secondary)]">{Number(data.methodology.devnet.samples).toLocaleString()} blocks · {Number(data.methodology.devnet.window_first_block).toLocaleString()}–{Number(data.methodology.devnet.window_last_block).toLocaleString()}</dd></div>
+              </dl>
+            </div>
+            <div className="rounded-md bg-[var(--surface-sunken)] p-3">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">Mainnet baseline</div>
+              <dl className="mt-1.5 space-y-1 text-[12.5px]">
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">tables</dt><dd className="font-mono text-right text-[var(--text-secondary)]">{data.methodology.mainnet.tables.join(", ")}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">window</dt><dd className="font-mono text-[var(--text-secondary)]">{Number(data.methodology.mainnet.samples).toLocaleString()} blocks · {Number(data.methodology.mainnet.window_first_block).toLocaleString()}–{Number(data.methodology.mainnet.window_last_block).toLocaleString()}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">dedup</dt><dd className="font-mono text-[var(--text-secondary)]">ReplacingMergeTree FINAL</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1.5 text-[12.5px] text-[var(--text-secondary)]">
+            <p><span className="font-mono text-[var(--text-muted)]">capacity ratio</span> = avg(testnet gas_limit) / avg(mainnet gas_limit) = <span className="font-mono text-[var(--text-primary)]">{M(devnet.gas_limit)} / {M(mainnet.gas_limit)} = {ratio.toFixed(2)}x</span></p>
+            <p><span className="font-mono text-[var(--text-muted)]">projected tx/block</span> = avg(mainnet tx/block) × capacity ratio = <span className="font-mono text-[var(--text-primary)]">{Math.round(mainnet.tx_per_block)} × {ratio.toFixed(2)} ≈ {data.projection.projected_mainnet_tx_per_block}</span></p>
+            <p className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+              <span>The tx projection is a <span className="font-semibold">naive linear scaling</span>: it assumes per-transaction gas is unchanged and does <span className="font-semibold">not</span> model Glamsterdam&apos;s gas repricing (EIP-7778 / 8037 / 2780 / 7904). Read it as capacity headroom, not a demand forecast.</span>
+            </p>
+          </div>
+        </DottedCard>
+      )}
 
       {/* Footer */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[var(--text-muted)] border-t border-[var(--border)] pt-3">

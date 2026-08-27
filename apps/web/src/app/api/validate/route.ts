@@ -108,9 +108,18 @@ export async function GET(req: Request) {
     const offAt = (block: number) =>
       doraHeadBlock > 0 ? (maxOffset * block) / doraHeadBlock : 0;
 
+    // A devnet reorg can leave Dora with TWO slots that both claim the same
+    // eth_block_number (both still labeled Canonical — Dora doesn't demote the
+    // orphaned one). The surviving block is the LATER proposal, so key by
+    // eth_block_number keeping the highest slot; otherwise we'd diff against an
+    // orphaned block and report a false mismatch.
     const doraByBlock = new Map<number, DoraSlot>();
     const ingest = (slots: DoraSlot[]) => {
-      for (const s of slots) if (s.with_eth_block) doraByBlock.set(s.eth_block_number, s);
+      for (const s of slots) {
+        if (!s.with_eth_block) continue;
+        const existing = doraByBlock.get(s.eth_block_number);
+        if (!existing || s.slot > existing.slot) doraByBlock.set(s.eth_block_number, s);
+      }
     };
 
     let slack = 80;

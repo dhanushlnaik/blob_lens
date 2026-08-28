@@ -21,7 +21,7 @@ export async function GET() {
                min(block_number) AS first_block,
                max(block_number) AS last_block,
                toUnixTimestamp(max(block_timestamp)) AS last_ts
-        FROM glamsterdam.block_stats
+        FROM glamsterdam.block_stats FINAL
       `),
       queryClickHouse<Row>(`
         SELECT round(avg(gas_limit)) AS gas_limit,
@@ -33,26 +33,32 @@ export async function GET() {
                round(avg(tx_type2), 1) AS tx_type2,
                round(avg(tx_type3), 1) AS tx_type3,
                round(avg(blob_count), 2) AS blobs_per_block,
-               round(avg(base_fee_per_gas)) AS base_fee_wei
-        FROM glamsterdam.block_stats
+               round(avg(base_fee_per_gas)) AS base_fee_wei,
+               count() AS samples,
+               min(block_number) AS window_first,
+               max(block_number) AS window_last
+        FROM glamsterdam.block_stats FINAL
         WHERE block_number > (SELECT max(block_number) - ${RECENT_DEVNET_BLOCKS} FROM glamsterdam.block_stats)
       `),
       queryClickHouse<Row>(`
         SELECT round(avg(gas_limit)) AS avg_gas_limit,
                round(avg(gas_used)) AS avg_gas_used,
                round(avg(gas_used / gas_limit), 4) AS gas_util,
-               round(avg(base_fee_per_gas)) AS base_fee_wei
-        FROM ethereum.blocks
+               round(avg(base_fee_per_gas)) AS base_fee_wei,
+               count() AS samples,
+               min(number) AS window_first,
+               max(number) AS window_last
+        FROM ethereum.blocks FINAL
         WHERE number > (SELECT max(number) - ${RECENT_MAINNET_BLOCKS} FROM ethereum.blocks)
       `),
       queryClickHouse<Row>(`
         SELECT round(avg(tx_count), 1) AS tx_per_block
-        FROM ethereum.block_gas_stats
+        FROM ethereum.block_gas_stats FINAL
         WHERE block_number > (SELECT max(block_number) - ${RECENT_MAINNET_BLOCKS} FROM ethereum.block_gas_stats)
       `),
       queryClickHouse<Row>(`
         SELECT round(avg(blob_count), 2) AS blobs_per_block
-        FROM blob_lens.block_blob_stats
+        FROM blob_lens.block_blob_stats FINAL
         WHERE block_number > (SELECT max(block_number) - ${RECENT_MAINNET_BLOCKS} FROM blob_lens.block_blob_stats)
       `),
       // Full-life ramp: gas + tx + blobs across the whole testnet, bucketed by
@@ -63,7 +69,7 @@ export async function GET() {
                round(avg(gas_used)) AS gas_used,
                round(avg(tx_count), 1) AS tx_count,
                round(avg(blob_count), 2) AS blob_count
-        FROM glamsterdam.block_stats
+        FROM glamsterdam.block_stats FINAL
         GROUP BY bucket
         ORDER BY bucket
       `),
@@ -119,6 +125,34 @@ export async function GET() {
         capacity_ratio: capacityRatio,
         projected_mainnet_tx_per_block: projectedMainnetTxPerBlock,
         note: "Testnet blocks are not full (light traffic); this reflects CAPACITY at the higher gas limit, not observed demand.",
+      },
+      // Provenance so researchers can reproduce every number. All averages are over
+      // deduplicated rows (ReplacingMergeTree FINAL). Devnet data is verified block
+      // -by-block against ethpandaops Dora — see the /validate tool.
+      methodology: {
+        devnet: {
+          table: "glamsterdam.block_stats",
+          source_rpc: "rpc.plataberget.ethpandaops.io",
+          window_blocks: RECENT_DEVNET_BLOCKS,
+          window_first_block: devnet.window_first ?? null,
+          window_last_block: devnet.window_last ?? null,
+          samples: devnet.samples ?? 0,
+          verified_against: "ethpandaops Dora (dora.glamsterdam-devnet-8.ethpandaops.io) — per-block, via /validate",
+        },
+        mainnet: {
+          tables: ["ethereum.blocks", "ethereum.block_gas_stats", "blob_lens.block_blob_stats"],
+          window_blocks: RECENT_MAINNET_BLOCKS,
+          window_first_block: mainGas.window_first ?? null,
+          window_last_block: mainGas.window_last ?? null,
+          samples: mainGas.samples ?? 0,
+        },
+        formulas: {
+          capacity_ratio: "avg(devnet gas_limit) / avg(mainnet gas_limit)",
+          projected_tx_per_block:
+            "avg(mainnet tx/block) × capacity_ratio — naive linear scaling. It assumes per-transaction gas is unchanged and does NOT model Glamsterdam's gas repricing (EIP-7778 / EIP-8037 / EIP-2780 / EIP-7904). Read it as an upper-bound capacity headroom, not a demand forecast.",
+          gas_util: "avg(gas_used / gas_limit) per block",
+          dedup: "all aggregates use ReplacingMergeTree FINAL (one row per block, latest version)",
+        },
       },
       ramp: seriesRows.map((r) => ({
         block: r.bucket,

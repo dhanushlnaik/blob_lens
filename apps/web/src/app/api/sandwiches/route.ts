@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // ── KPI: aggregate over date range ───────────────────────────────────────
-    const [kpiRows, weeklyRows, botRows] = await Promise.all([
+    const [kpiRows, weeklyRows, botRows, dexRows] = await Promise.all([
       queryClickHouse<any>(`
         SELECT
           sum(sandwiches)                     AS total_sandwiches,
@@ -103,14 +103,14 @@ export async function GET(req: NextRequest) {
       // ── Weekly trend: victim volume + sandwich count ──────────────────────
       queryClickHouse<any>(`
         SELECT
-          toString(toStartOfWeek(date))       AS date,
+          toString(toStartOfWeek(date))       AS wk,
           sum(sandwiches)                     AS sandwiched_tx_k,
           sum(victim_volume_usd) / 1e6        AS sandwiched_vol_m,
           uniqMerge(unique_victims) / 1e3     AS sandwiched_traders_k
         FROM blob_lens.mev_daily_stats
         WHERE date >= today() - INTERVAL ${days} DAY
-        GROUP BY date
-        ORDER BY date ASC
+        GROUP BY wk
+        ORDER BY wk ASC
         LIMIT 60
       `),
 
@@ -127,6 +127,26 @@ export async function GET(req: NextRequest) {
         ORDER BY sandwich_count DESC
         LIMIT 10
       `),
+
+      // ── DEXes affected: real per-protocol extraction (ETH + USD) ──────────
+      // Uses gross_profit_weth/usd (internally consistent) — NOT victim_volume_usd
+      // (known-corrupted). Net = gross − gas cost.
+      queryClickHouse<any>(`
+        SELECT
+          protocol                                        AS dex,
+          sum(sandwiches)                                 AS sandwiches,
+          sum(gross_profit_weth)                          AS gross_weth,
+          sum(gross_profit_usd)                           AS gross_usd,
+          sum(gross_profit_weth) - sum(gas_cost_weth)     AS net_weth,
+          uniqMerge(unique_victims)                       AS victims,
+          uniqMerge(unique_pools)                         AS pools
+        FROM blob_lens.mev_daily_stats
+        WHERE date >= today() - INTERVAL ${days} DAY
+        GROUP BY protocol
+        HAVING sandwiches > 0
+        ORDER BY gross_weth DESC
+        LIMIT 15
+      `),
     ]);
 
     const kpi = kpiRows[0] ?? {};
@@ -136,26 +156,26 @@ export async function GET(req: NextRequest) {
     // ── Build trends (weekly), filling ratio placeholders with rng ───────────
     const numWeeks = weeklyRows.length;
     const volume_trend = weeklyRows.map((r: any, i: number) => ({
-      date: r.date,
+      date: r.wk,
       total_dex_vol_b: Number((Number(r.sandwiched_vol_m) / 0.02 / 1000).toFixed(2)), // estimate: ~2% sandwiched
       sandwiched_vol_m: Number(Number(r.sandwiched_vol_m).toFixed(2)),
       sandwiched_pct: 2.0 + rng(i * 3) * 0.5,
     }));
 
     const blocks_ratio_trend = weeklyRows.map((r: any, i: number) => ({
-      date: r.date,
+      date: r.wk,
       blocks_w_dex_pct: Number((65 + rng(i * 3) * 5).toFixed(1)),
       blocks_w_sandwich_pct: Number((22 + rng(i * 5) * 3).toFixed(1)),
     }));
 
     const addresses_trend = weeklyRows.map((r: any) => ({
-      date: r.date,
+      date: r.wk,
       unique_traders_k: Number((Number(r.sandwiched_traders_k) * 18).toFixed(1)), // est. sandwiched ≈ 5% of all traders
       sandwiched_traders_k: Number(Number(r.sandwiched_traders_k).toFixed(2)),
     }));
 
     const tx_trend = weeklyRows.map((r: any, i: number) => ({
-      date: r.date,
+      date: r.wk,
       total_dex_tx_m: Number((Number(r.sandwiched_tx_k) / 0.035 / 1000).toFixed(2)), // est. ~3.5% sandwiched
       sandwiched_tx_k: Number((Number(r.sandwiched_tx_k) / 1000).toFixed(2)),
     }));
@@ -194,6 +214,29 @@ export async function GET(req: NextRequest) {
     const top_tokens = (query ? top_tokens_raw.filter(t => t.symbol.toLowerCase().includes(query.toLowerCase())) : top_tokens_raw)
       .map(t => ({ ...t, volume_m: Number((t.volume_usd / 1_000_000).toFixed(1)) }));
 
+    // ── DEXes affected: real per-protocol extraction ─────────────────────────
+    const DEX_LABELS: Record<string, string> = {
+      uniswap_v2: "Uniswap v2", uniswap_v3: "Uniswap v3", uniswap_v4: "Uniswap v4",
+      sushiswap_v2: "SushiSwap v2", pancakeswap_v2: "PancakeSwap v2", balancer: "Balancer",
+      curve: "Curve", dodo: "DODO", other_v2: "Other (v2)",
+    };
+    const dexTotalWeth = dexRows.reduce((s: number, d: any) => s + Number(d.gross_weth || 0), 0);
+    const dexes_affected = dexRows.map((d: any, i: number) => {
+      const grossWeth = Number(d.gross_weth || 0);
+      return {
+        rank: i + 1,
+        dex: d.dex,
+        label: DEX_LABELS[d.dex] ?? d.dex,
+        sandwiches: Number(d.sandwiches || 0),
+        extracted_weth: Number(grossWeth.toFixed(2)),
+        extracted_usd: Math.round(Number(d.gross_usd || 0)),
+        net_weth: Number(Number(d.net_weth || 0).toFixed(2)),
+        victims: Number(d.victims || 0),
+        pools: Number(d.pools || 0),
+        share_pct: dexTotalWeth > 0 ? Number(((grossWeth / dexTotalWeth) * 100).toFixed(1)) : 0,
+      };
+    });
+
     return NextResponse.json({
       is_fallback: false,
       range,
@@ -215,6 +258,7 @@ export async function GET(req: NextRequest) {
       tx_trend,
       top_bots,
       top_tokens,
+      dexes_affected,
     });
 
   } catch (err) {

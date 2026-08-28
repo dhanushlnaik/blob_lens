@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { TimeRangePicker, type DateRangeState } from "@/components/shared/time-range-picker";
 import { DottedCard } from "@/components/ui/dotted-card";
+import { cn } from "@/lib/utils";
 import { PixelHeading } from "@/components/ui/pixel-heading-word";
 import { EChartWrapper, ChartFooter } from "@/components/charts/echart-wrapper";
 import { SandwichReconstructorModal } from "@/components/modals/sandwich-reconstructor-modal";
@@ -75,7 +76,7 @@ function ProvenanceTooltip({
   );
 }
 
-export function SandwichesClient() {
+export function DexClient() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
@@ -84,6 +85,7 @@ export function SandwichesClient() {
   const [dateRange, setDateRange] = useState<DateRangeState>({ preset: "30d" });
   const [searchQuery, setSearchQuery] = useState("");
   const [botFilterQuery, setBotFilterQuery] = useState("");
+  const [leaderboardView, setLeaderboardView] = useState<"bots" | "dexes">("dexes");
   const [selectedAttack, setSelectedAttack] = useState<any | null>(null);
 
   const loadData = useCallback(async () => {
@@ -683,26 +685,84 @@ export function SandwichesClient() {
         </DottedCard>
 
         <DottedCard
-          title="Top Ethereum Sandwich Bot Leaderboard"
-          subtitle="Auditing highest profit sandwich arbitrageurs on Ethereum mainnet"
-          badge="⚡ Bot Ranking"
+          title={leaderboardView === "dexes" ? "DEXes Hit by Sandwich Bots" : "Bots Extracting the Most from DEXes"}
+          subtitle={leaderboardView === "dexes"
+            ? "Which Ethereum DEXes lose the most to sandwich attacks — value extracted in ETH & USD"
+            : "Highest-volume sandwich arbitrageurs by extraction across Ethereum AMMs"}
+          badge="⚡ MEV Impact"
           badgeType="iris"
           techBracket
           className="lg:col-span-2"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 mb-2.5">
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                value={botFilterQuery}
-                onChange={(e) => setBotFilterQuery(e.target.value)}
-                placeholder="Filter bot name or address..."
-                className="w-full h-8 pl-9 pr-3 bg-[var(--surface-sunken)] border border-[var(--border)] rounded-[4px] text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)]"
-              />
+            {/* View toggle: lead with the victims (DEXes), not the bad actors */}
+            <div className="inline-flex rounded-[5px] border border-[var(--border)] bg-[var(--surface-sunken)] p-0.5 text-xs font-mono">
+              <button
+                onClick={() => setLeaderboardView("dexes")}
+                className={cn("px-3 py-1.5 rounded-[4px] transition-colors", leaderboardView === "dexes" ? "bg-[var(--primary)] text-[var(--surface-0)] font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]")}
+              >
+                DEXes affected
+              </button>
+              <button
+                onClick={() => setLeaderboardView("bots")}
+                className={cn("px-3 py-1.5 rounded-[4px] transition-colors", leaderboardView === "bots" ? "bg-[var(--primary)] text-[var(--surface-0)] font-bold" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]")}
+              >
+                Top bots
+              </button>
             </div>
+            {leaderboardView === "bots" && (
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-[var(--text-muted)]" />
+                <input
+                  type="text"
+                  value={botFilterQuery}
+                  onChange={(e) => setBotFilterQuery(e.target.value)}
+                  placeholder="Filter bot name or address..."
+                  className="w-full h-8 pl-9 pr-3 bg-[var(--surface-sunken)] border border-[var(--border)] rounded-[4px] text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)]"
+                />
+              </div>
+            )}
           </div>
 
+          {leaderboardView === "dexes" && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-dashed border-[var(--border)] text-xs font-mono uppercase tracking-widest text-[var(--text-muted)]">
+                    <th className="py-2.5 px-3">Rank</th>
+                    <th className="py-2.5 px-3">DEX</th>
+                    <th className="py-2.5 px-3">Sandwiches</th>
+                    <th className="py-2.5 px-3">Extracted (ETH)</th>
+                    <th className="py-2.5 px-3">Extracted (USD)</th>
+                    <th className="py-2.5 px-3">Victims</th>
+                    <th className="py-2.5 px-3">Pools</th>
+                    <th className="py-2.5 px-3 text-right">Share</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border)] text-sm font-mono">
+                  {(data?.dexes_affected ?? []).map((d: any) => (
+                    <tr key={d.dex} className="hover:bg-[var(--surface-sunken)] transition-colors">
+                      <td className="py-3 px-3 text-[var(--primary-text)] font-bold">#{d.rank}</td>
+                      <td className="py-3 px-3 font-bold text-[var(--text-primary)]">{d.label}</td>
+                      <td className="py-3 px-3 text-[var(--text-secondary)] text-xs">{fmtK(d.sandwiches)}</td>
+                      <td className="py-3 px-3 font-bold text-[var(--text-primary)]">{d.extracted_weth >= 1 ? d.extracted_weth.toLocaleString(undefined, { maximumFractionDigits: 0 }) : d.extracted_weth} <span className="text-[10px] text-[var(--text-muted)]">ETH</span></td>
+                      <td className="py-3 px-3 font-bold text-[var(--success)]">{fmtUsd(d.extracted_usd)}</td>
+                      <td className="py-3 px-3 text-[var(--text-secondary)] text-xs">{fmtK(d.victims)}</td>
+                      <td className="py-3 px-3 text-[var(--text-muted)] text-xs">{fmtK(d.pools)}</td>
+                      <td className="py-3 px-3 text-right">
+                        <span className="px-2 py-0.5 rounded-[3px] bg-[var(--primary-bg)] border border-[var(--primary-border)] text-[var(--primary-text)] text-xs font-bold">{d.share_pct}%</span>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!data?.dexes_affected || data.dexes_affected.length === 0) && (
+                    <tr><td colSpan={8} className="py-8 text-center text-xs text-[var(--text-muted)]">No DEX extraction data in this window.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {leaderboardView === "bots" && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -770,6 +830,7 @@ export function SandwichesClient() {
               </tbody>
             </table>
           </div>
+          )}
         </DottedCard>
       </div>
 

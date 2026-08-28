@@ -16,12 +16,27 @@ type Impact = {
   ramp: { block: number; gas_limit: number; gas_used: number; tx_count: number; blob_count: number }[];
   eips: { id: string; label: string }[];
   disclaimer: string;
+  methodology?: {
+    devnet: { table: string; source_rpc: string; window_blocks: number; window_first_block: number | string | null; window_last_block: number | string | null; samples: number | string; verified_against: string };
+    mainnet: { tables: string[]; window_blocks: number; window_first_block: number | string | null; window_last_block: number | string | null; samples: number | string };
+    formulas: { capacity_ratio: string; projected_tx_per_block: string; gas_util: string; dedup: string };
+  };
 };
 
 // Plataberget testnet = purple, mainnet today = grey. Blobs = amber. Consistent everywhere.
 const C = { test: "#7C5CFF", main: "#94A3B8", blob: "#D97706" };
 const M = (n: number) => `${(n / 1e6).toFixed(0)}M`;
 const LEGEND = { top: 0, itemWidth: 11, itemHeight: 11, textStyle: { fontSize: 11, fontFamily: "var(--font-mono)" } };
+
+/** Per-panel provenance line: the testnet data is per-block verifiable against Dora. */
+function VerifyDora() {
+  return (
+    <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+      Per-block data, verifiable against ethpandaops Dora.{" "}
+      <Link href="/validate" className="font-mono text-[var(--primary-text)] underline decoration-dotted">Check it →</Link>
+    </p>
+  );
+}
 
 function HowToRead({ children }: { children: React.ReactNode }) {
   return (
@@ -144,6 +159,23 @@ export function PlatabergetClient() {
     } as unknown as EChartsOption;
   }, [data, dark]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Horizontal 2-bar comparison builder (mainnet vs testnet).
+  const hCompare = (mnVal: number, tsVal: number, label: (v: number) => string, maxV?: number): EChartsOption => ({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis", ...tt, axisPointer: { type: "shadow" }, formatter: (ps: { name: string; value: number }[]) => `${ps[0]?.name}: <b>${label(ps[0]?.value)}</b>` },
+    grid: { top: 10, right: 64, bottom: 10, left: 12, containLabel: true },
+    xAxis: { type: "value", max: maxV, ...ax, axisLabel: { ...ax.axisLabel, formatter: (v: number) => label(v) } },
+    yAxis: { type: "category", data: ["Mainnet today", "Platåberget testnet"], ...ax, axisLabel: { ...ax.axisLabel, fontSize: 12 } },
+    series: [{
+      type: "bar", barWidth: "48%",
+      data: [{ value: mnVal, itemStyle: { color: C.main } }, { value: tsVal, itemStyle: { color: C.test } }],
+      label: { show: true, position: "right", color: labelColor, fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: "bold", formatter: (p: { value: number }) => label(p.value) },
+    }],
+  } as unknown as EChartsOption);
+
+  const baseFeeOption = useMemo<EChartsOption>(() => (data ? hCompare(data.mainnet.base_fee_gwei, data.devnet.base_fee_gwei, (v) => `${v.toFixed(3)} gwei`) : ({} as EChartsOption)), [data, dark]); // eslint-disable-line react-hooks/exhaustive-deps
+  const blobsCompareOption = useMemo<EChartsOption>(() => (data ? hCompare(data.mainnet.blobs_per_block, data.devnet.blobs_per_block, (v) => `${v.toFixed(1)}`) : ({} as EChartsOption)), [data, dark]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (err) return <div className="font-mono text-xs text-[var(--warning)] py-12">[ ERROR ] {err}</div>;
   if (!data) return <div className="font-mono text-xs text-[var(--text-muted)] py-12 animate-pulse tracking-widest">[ LOADING TESTNET IMPACT... ]</div>;
 
@@ -160,7 +192,7 @@ export function PlatabergetClient() {
             <AlertTriangle className="h-3 w-3" /> Testnet projection
           </span>
         </div>
-        <p className="max-w-3xl text-[15px] leading-relaxed text-[var(--text-secondary)]">
+        <p className="w-full text-[15px] leading-relaxed text-[var(--text-secondary)]">
           The next Ethereum upgrade makes every block bigger. On the live Platåberget testnet, block capacity has scaled to about
           <span className="font-semibold text-[var(--text-primary)]"> {ratio.toFixed(1)}x</span> mainnet today.
           <span className="ml-2 inline-flex items-center gap-3 align-middle text-[12px] font-mono text-[var(--text-muted)]">
@@ -191,8 +223,9 @@ export function PlatabergetClient() {
         <EChartWrapper option={rampOption} style={{ height: "340px", width: "100%" }} showFooter={false} />
         <HowToRead>
           The bold purple line is the maximum size of each Platåberget block. It stepped up from mainnet&apos;s level to about <span className="font-mono">{M(devnet.gas_limit)}</span>, roughly <span className="font-mono">{ratio.toFixed(1)}x</span> more.
-          The grey dashed line is all a mainnet block can hold today. The shaded area is how much each block actually uses, already well above the grey line, so the extra capacity is real, not theoretical.
+          The grey dashed line is all a mainnet block can hold today. The shaded area is how much each block actually <em>uses</em>: testnet traffic is synthetic and light, so for most of the run blocks sat well below even mainnet&apos;s capacity. Recent load-test bursts push usage toward <span className="font-mono">{M(devnet.gas_used)}</span> — showing the larger ceiling can genuinely be filled, not that it continuously is.
         </HowToRead>
+        <VerifyDora />
       </DottedCard>
 
       {/* Two-up: comparison + fullness */}
@@ -202,7 +235,7 @@ export function PlatabergetClient() {
           <HowToRead>Mainnet (grey) next to Platåberget (purple). The purple bars are about <span className="font-mono">{ratio.toFixed(1)}x</span> taller, meaning bigger blocks doing more work each. Gas just measures block space and computation.</HowToRead>
         </DottedCard>
 
-        <DottedCard title="The bigger blocks are genuinely full" subtitle="How full blocks run" techBracket>
+        <DottedCard title="How full the bigger blocks run now" subtitle="Recent window · last ~2,000 blocks" techBracket>
           <EChartWrapper option={fullnessOption} style={{ height: "150px", width: "100%" }} showFooter={false} />
           <div className="mt-3 flex flex-wrap items-baseline gap-2 border-t border-[var(--border)] pt-3">
             <span className="text-[13px] text-[var(--text-secondary)]">Transactions per block, on average:</span>
@@ -210,7 +243,7 @@ export function PlatabergetClient() {
             <ArrowRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />
             <span className="font-mono font-semibold text-[var(--primary-text)]">room for ~{ratio.toFixed(1)}x more</span>
           </div>
-          <HowToRead>Both networks run their blocks about equally full, so the testnet is not an empty big block. It does a similar share of work on a block roughly <span className="font-mono">{ratio.toFixed(1)}x</span> larger, leaving room for far more transactions.</HowToRead>
+          <HowToRead>In the recent window, both networks run their blocks at a similar fullness — so the recent testnet load isn&apos;t just empty big blocks. It does a comparable share of work on a block roughly <span className="font-mono">{ratio.toFixed(1)}x</span> larger, with headroom for far more. (Earlier in the run, traffic was much lighter — see the timeline above.)</HowToRead>
         </DottedCard>
       </div>
 
@@ -219,11 +252,26 @@ export function PlatabergetClient() {
         <DottedCard title="Transactions per block over time" subtitle="Activity on the Platåberget testnet" techBracket>
           <EChartWrapper option={txOption} style={{ height: "210px", width: "100%" }} showFooter={false} />
           <HowToRead>Each point is the average transactions in a block as the testnet runs. It shows real usage building, all comfortably inside the bigger blocks.</HowToRead>
+          <VerifyDora />
         </DottedCard>
 
         <DottedCard title="Blobs per block over time" subtitle="Rollup data throughput" techBracket>
           <EChartWrapper option={blobOption} style={{ height: "210px", width: "100%" }} showFooter={false} />
           <HowToRead>Blobs carry rollup data on Ethereum. Each point is the average blobs per block, showing data availability alongside the gas and block-size changes.</HowToRead>
+          <VerifyDora />
+        </DottedCard>
+      </div>
+
+      {/* Two-up: fee + blobs comparison */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DottedCard title="Base fee, testnet vs mainnet" subtitle="What one unit of gas costs" techBracket>
+          <EChartWrapper option={baseFeeOption} style={{ height: "150px", width: "100%" }} showFooter={false} />
+          <HowToRead>The base fee is the price of block space. With far more room per block, the Platåberget testnet&apos;s fee sits well below mainnet&apos;s. Real mainnet fees depend on demand, but bigger blocks relieve the pressure that pushes them up.</HowToRead>
+        </DottedCard>
+
+        <DottedCard title="Blobs per block, testnet vs mainnet" subtitle="Rollup data carried per block" techBracket>
+          <EChartWrapper option={blobsCompareOption} style={{ height: "150px", width: "100%" }} showFooter={false} />
+          <HowToRead>Blobs are the cheap data slots rollups post to Ethereum. The testnet is carrying more blobs per block than mainnet today, so rollups get more room for their data alongside the bigger blocks.</HowToRead>
         </DottedCard>
       </div>
 
@@ -242,6 +290,44 @@ export function PlatabergetClient() {
           })}
         </ul>
       </DottedCard>
+
+      {/* Methodology & verification — for researchers who want to reproduce/validate */}
+      {data.methodology && (
+        <DottedCard title="Methodology & verification" subtitle="Every number, and how to reproduce it" badge="For reviewers" badgeType="iris" techBracket>
+          <div className="mt-1 rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-[13px] text-[var(--text-secondary)]">
+            The devnet numbers are verified <span className="font-semibold text-[var(--text-primary)]">block-by-block against ethpandaops Dora</span>.{" "}
+            <Link href="/validate" className="font-mono text-[var(--primary-text)] underline decoration-dotted">Open the live validation tool →</Link>
+          </div>
+
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-md bg-[var(--surface-sunken)] p-3">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">Testnet (Platåberget)</div>
+              <dl className="mt-1.5 space-y-1 text-[12.5px]">
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">table</dt><dd className="font-mono text-[var(--text-secondary)]">{data.methodology.devnet.table}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">source</dt><dd className="font-mono text-[var(--text-secondary)]">{data.methodology.devnet.source_rpc}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">window</dt><dd className="font-mono text-[var(--text-secondary)]">{Number(data.methodology.devnet.samples).toLocaleString()} blocks · {Number(data.methodology.devnet.window_first_block).toLocaleString()}–{Number(data.methodology.devnet.window_last_block).toLocaleString()}</dd></div>
+              </dl>
+            </div>
+            <div className="rounded-md bg-[var(--surface-sunken)] p-3">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">Mainnet baseline</div>
+              <dl className="mt-1.5 space-y-1 text-[12.5px]">
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">tables</dt><dd className="font-mono text-right text-[var(--text-secondary)]">{data.methodology.mainnet.tables.join(", ")}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">window</dt><dd className="font-mono text-[var(--text-secondary)]">{Number(data.methodology.mainnet.samples).toLocaleString()} blocks · {Number(data.methodology.mainnet.window_first_block).toLocaleString()}–{Number(data.methodology.mainnet.window_last_block).toLocaleString()}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">dedup</dt><dd className="font-mono text-[var(--text-secondary)]">ReplacingMergeTree FINAL</dd></div>
+              </dl>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-1.5 text-[12.5px] text-[var(--text-secondary)]">
+            <p><span className="font-mono text-[var(--text-muted)]">capacity ratio</span> = avg(testnet gas_limit) / avg(mainnet gas_limit) = <span className="font-mono text-[var(--text-primary)]">{M(devnet.gas_limit)} / {M(mainnet.gas_limit)} = {ratio.toFixed(2)}x</span></p>
+            <p><span className="font-mono text-[var(--text-muted)]">projected tx/block</span> = avg(mainnet tx/block) × capacity ratio = <span className="font-mono text-[var(--text-primary)]">{Math.round(mainnet.tx_per_block)} × {ratio.toFixed(2)} ≈ {data.projection.projected_mainnet_tx_per_block}</span></p>
+            <p className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+              <span>The tx projection is a <span className="font-semibold">naive linear scaling</span>: it assumes per-transaction gas is unchanged and does <span className="font-semibold">not</span> model Glamsterdam&apos;s gas repricing (EIP-7778 / 8037 / 2780 / 7904). Read it as capacity headroom, not a demand forecast.</span>
+            </p>
+          </div>
+        </DottedCard>
+      )}
 
       {/* Footer */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[var(--text-muted)] border-t border-[var(--border)] pt-3">

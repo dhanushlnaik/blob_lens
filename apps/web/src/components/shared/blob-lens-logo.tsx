@@ -24,7 +24,7 @@ export function BlobLensLogo({
     (textSize === "sm" ? 24 : textSize === "md" ? 34 : textSize === "lg" ? 42 : 52);
 
   return (
-    <div className={cn("inline-flex items-center gap-2 select-none group cursor-pointer", className)}>
+    <div className={cn("inline-flex shrink-0 flex-nowrap items-center gap-2 whitespace-nowrap select-none group cursor-pointer", className)}>
       {/* ── Main Brand Icon (/brand/logomain.svg rendered in exact brand color) ── */}
       {showIcon && (
         <div
@@ -50,11 +50,11 @@ export function BlobLensLogo({
 
       {/* ── Compact Scaled Display Text Logo: BLOB L ≡ NS ── */}
       {showText && (
-        <div className="flex items-center font-sans uppercase font-black tracking-wider text-[var(--text-primary)]">
+        <div className="flex flex-nowrap items-center whitespace-nowrap font-sans uppercase font-black tracking-wider text-[var(--text-primary)]">
           {/* BLOB L */}
           <span
             className={cn(
-              "font-sans font-black tracking-wider text-[var(--text-primary)] transition-colors",
+              "font-sans font-black tracking-wider whitespace-nowrap text-[var(--text-primary)] transition-colors",
               textSize === "sm" && "text-[11px]",
               textSize === "md" && "text-xs sm:text-sm",
               textSize === "lg" && "text-sm sm:text-base",

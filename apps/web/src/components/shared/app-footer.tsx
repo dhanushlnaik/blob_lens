@@ -27,7 +27,7 @@ export function AppFooter() {
             <div className="flex items-center gap-2.5">
               <BlobLensLogo textSize="lg" iconSize={42} />
               <span className="badge-live inline-flex items-center gap-1.5 uppercase font-mono tracking-wider text-[10px] ml-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
                 LIVE INDEXING
               </span>
             </div>

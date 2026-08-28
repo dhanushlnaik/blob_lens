@@ -36,9 +36,9 @@ const MEMPOOL_DROPDOWN = [
     badge: "🟣 EIP-8184",
   },
   {
-    href: "/sandwiches",
-    label: "Sandwich Analytics",
-    desc: "DEX volume ratios, bot rankings, token exposure & custom range",
+    href: "/dex",
+    label: "DEX Analytics",
+    desc: "DEXes affected, top extracting bots (ETH & USD), volume ratios & token exposure",
     icon: Layers,
     badge: "⚡ DEX Data",
   },
@@ -121,7 +121,7 @@ export function AppNavbar() {
             
             {/* Live Status Badge */}
             <span className="badge-live hidden sm:inline-flex items-center gap-1.5 uppercase font-mono tracking-wider text-[10px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
               LIVE
             </span>
           </Link>

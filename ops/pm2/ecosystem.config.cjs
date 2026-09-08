@@ -69,5 +69,28 @@ module.exports = {
       error_file: path.join(sharedLogs, "devnet-collector.err.log"),
       time: true,
     },
+    {
+      // Daily rollup of L1 transactions by type/class into
+      // blob_lens.tx_daily_type_stats (powers the EIPsInsight AA ecosystem
+      // dashboard). Runs once and exits; cron_restart reruns it nightly and it
+      // resumes from the last stored day (ReplacingMergeTree makes re-runs safe).
+      // One-time historical backfill is a manual run: `node scripts/rollup-tx-daily.mjs --from <date>`.
+      name: "blob-lens-tx-rollup",
+      cwd: root,
+      script: "scripts/rollup-tx-daily.mjs",
+      interpreter: "node",
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: false,
+      cron_restart: "20 1 * * *",
+      env_production: {
+        CLICKHOUSE_URL: process.env.CLICKHOUSE_HTTP || "http://ba-data:8123",
+        CLICKHOUSE_USER: process.env.CLICKHOUSE_USER || "blob_lens",
+        CLICKHOUSE_PASSWORD: process.env.CLICKHOUSE_PASSWORD || "",
+      },
+      out_file: path.join(sharedLogs, "tx-rollup.out.log"),
+      error_file: path.join(sharedLogs, "tx-rollup.err.log"),
+      time: true,
+    },
   ],
 };
